@@ -5,6 +5,8 @@ import { proto } from '../../WAProto'
 import { DEFAULT_CONNECTION_CONFIG } from '../Defaults'
 import type makeMDSocket from '../Socket'
 import type { BaileysEventEmitter, Chat, ConnectionState, Contact, GroupMetadata, PresenceData, WAMessage, WAMessageCursor, WAMessageKey } from '../Types'
+import { Label } from '../Types/Label'
+import { LabelAssociation } from '../Types/LabelAssociation'
 import { toNumber, updateMessageWithReaction, updateMessageWithReceipt } from '../Utils'
 import { jidNormalizedUser } from '../WABinary'
 import makeOrderedDictionary from './make-ordered-dictionary'
@@ -13,6 +15,10 @@ type WASocket = ReturnType<typeof makeMDSocket>
 
 export const waChatKey = (pin: boolean) => ({
 	key: (c: Chat) => (pin ? (c.pinned ? '1' : '0') : '') + (c.archived ? '0' : '1') + (c.conversationTimestamp ? c.conversationTimestamp.toString(16).padStart(8, '0') : '') + c.id,
+	compare: (k1: string, k2: string) => k2.localeCompare (k1)
+})
+export const waLabelAssociationKey = ({
+	key: (la: LabelAssociation) => la.associationId + la.labelId,
 	compare: (k1: string, k2: string) => k2.localeCompare (k1)
 })
 
@@ -35,6 +41,8 @@ export default (
 	const chats = new KeyedDB(chatKey, c => c.id)
 	const messages: { [_: string]: ReturnType<typeof makeMessagesDictionary> } = { }
 	const contacts: { [_: string]: Contact } = { }
+	const labels: { [_: string]: Label } = { }
+	const labelsAssociations = new KeyedDB(waLabelAssociationKey, (la: LabelAssociation) => la.associationId + la.labelId) as unknown as KeyedDB<LabelAssociation, string>
 	const groupMetadata: { [_: string]: GroupMetadata } = { }
 	const presences: { [id: string]: { [participant: string]: PresenceData } } = { }
 	const state: ConnectionState = { connection: 'close' }
@@ -58,6 +66,19 @@ export default (
 		}
 
 		return oldContacts
+	}
+
+	const labelsUpsert = (newLabels: Label[]) => {
+		const oldLabels = new Set(Object.keys(labels))
+		for(const label of newLabels) {
+			oldLabels.delete(label.id.toString())
+			labels[label.id] = Object.assign(
+				labels[label.id] || {},
+				label
+			)
+		}
+
+		return oldLabels
 	}
 
 	/**
@@ -241,17 +262,47 @@ export default (
 				}
 			}
 		})
+
+		ev.on('label.edit', (label) => {
+			if(label.deleted) {
+				if(!labels[label.id]) {
+					logger.debug(label, 'got delete action for non-existant label')
+				} else {
+					delete labels[label.id]
+				}
+			} else if(labels[label.id]) {
+				Object.assign(labels[label.id], label)
+			} else {
+				labels[label.id] = label
+			}
+		})
+		ev.on('label.association.add', labelAssociation => {
+			labelsAssociations.upsert(labelAssociation)
+		})
+		ev.on('label.association.delete', labelAssociation => {
+			labelsAssociations.delete(labelAssociation)
+		})
 	}
 
 	const toJSON = () => ({
 		chats,
 		contacts,
-		messages
+		messages,
+		labels,
+		labelsAssociations
 	})
 
-	const fromJSON = (json: { chats: Chat[], contacts: { [id: string]: Contact }, messages: { [id: string]: WAMessage[] } }) => {
+	const fromJSON = (json: {
+		chats: Chat[]
+		contacts: { [id: string]: Contact }
+		messages: { [id: string]: WAMessage[] }
+		labels: { [id: string]: Label }
+		labelsAssociations: LabelAssociation[]
+	}) => {
 		chats.upsert(...json.chats)
 		contactsUpsert(Object.values(json.contacts))
+		labelsUpsert(Object.values(json.labels || {}))
+		labelsAssociations.upsert(...json.labelsAssociations || [])
 		for(const jid in json.messages) {
 			const list = assertMessageList(jid)
 			for(const msg of json.messages[jid]) {
@@ -265,6 +316,8 @@ export default (
 		chats,
 		contacts,
 		messages,
+		labels,
+		labelsAssociations,
 		groupMetadata,
 		state,
 		presences,

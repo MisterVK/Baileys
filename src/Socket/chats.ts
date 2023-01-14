@@ -2,6 +2,7 @@ import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto'
 import { PROCESSABLE_HISTORY_TYPES } from '../Defaults'
 import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence } from '../Types'
+import { LabelAssociationType } from '../Types/LabelAssociation'
 import { chatModificationToAppPatch, ChatMutationMap, decodePatches, decodeSyncdSnapshot, encodeSyncdPatch, extractSyncdPatches, generateProfilePicture, getHistoryMsg, newLTHashState, processSyncAction } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import processMessage from '../Utils/process-message'
@@ -690,6 +691,24 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return props
 	}
 
+	const setChatLabel = async(jid: string, labelId: string, labaled: boolean = true) => {
+		return chatModify({
+			type: LabelAssociationType.JID,
+			labelId,
+			labelAssociationAction: { labaled },
+		}, jid)
+	}
+
+	const setMessageLabel = async(jid: string, messageId: string, labelId: string, labaled: boolean = true) => {
+		return chatModify({
+			type: LabelAssociationType.MESSAGE,
+			labelId,
+			messageId,
+			labelAssociationAction: { labaled },
+
+		}, jid)
+	}
+
 	/**
      * modify a chat -- mark unread, read etc.
      * lastMessages must be sorted in reverse chronologically
@@ -859,6 +878,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		updateBlockStatus,
 		getBusinessProfile,
 		resyncAppState,
+		setChatLabel,
+		setMessageLabel,
 		chatModify
 	}
 }
