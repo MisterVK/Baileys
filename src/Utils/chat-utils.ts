@@ -607,20 +607,53 @@ export const chatModificationToAppPatch = (
 			apiVersion: 1,
 			operation: OP.SET,
 		}
-	} else if('labelAssociationAction' in mod) {
+	} else if('addLabel' in mod) {
 		patch = {
 			syncAction: {
 				labelAssociationAction: {
-					labeled: mod.labelAssociationAction.labaled
+					labeled: true
 				}
 			},
-			index: [mod.type, mod.labelId, jid],
+			index: [LabelAssociationType.JID, mod.addLabel.label, jid],
 			type: 'regular',
 			apiVersion: 1,
 			operation: OP.SET,
 		}
-		if(mod.type === LabelAssociationType.MESSAGE) {
-			patch.index.push(mod.messageId!, '0', '0')
+	} else if('removeLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: false
+				}
+			},
+			index: [LabelAssociationType.JID, mod.removeLabel.label, jid],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
+	} else if('addMessageLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: true
+				}
+			},
+			index: [LabelAssociationType.JID, mod.addMessageLabel.label, jid, mod.addMessageLabel.messageId, '0', '0'],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
+	} else if('removeMessageLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: false
+				}
+			},
+			index: [LabelAssociationType.JID, mod.removeMessageLabel.label, jid, mod.removeMessageLabel.messageId, '0', '0'],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
 		}
 	} else {
 		throw new Boom('not supported')

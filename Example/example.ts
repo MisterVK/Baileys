@@ -121,8 +121,8 @@ const startSock = async() => {
 
 							if(store) {
 								const labels = Object.values(store.labels)
-								await sock.setChatLabel(msg.key.remoteJid!, labels[0].id)
-								await sock.setMessageLabel(msg.key.remoteJid!, msg.key.id!, labels[1].id)
+								await sock.addChatLabel(msg.key.remoteJid!, labels[0].id)
+								await sock.addMessageLabel(msg.key.remoteJid!, msg.key.id!, labels[1].id)
 							}
 						}
 					}

@@ -1,7 +1,6 @@
 import type { proto } from '../../WAProto'
 import type { AccountSettings } from './Auth'
 import type { BufferedEventData } from './Events'
-import { LabelAssociationType } from './LabelAssociation'
 import type { MinimalMessage } from './Message'
 
 /** set of statuses visible to other people; see updatePresence() in WhatsAppWeb.Send */
@@ -75,7 +74,7 @@ export type ChatModification =
     }
     | {
         star: {
-            messages: { id: string, fromMe?: boolean }[],
+            messages: { id: string, fromMe?: boolean }[]
             star: boolean
         }
     }
@@ -85,10 +84,27 @@ export type ChatModification =
     }
     | { delete: true, lastMessages: LastMessageList }
     | {
-        labelId: string
-        type: LabelAssociationType
-        messageId?: string
-        labelAssociationAction: { labaled: boolean }
+        addLabel: {
+            label: string
+        }
+    }
+    | {
+        removeLabel: {
+            label: string
+            messageId?: string
+        }
+    }
+    | {
+        addMessageLabel: {
+            label: string
+            messageId: string
+        }
+    }
+    | {
+        removeMessageLabel: {
+            label: string
+            messageId: string
+        }
     }
 
 export type InitialReceivedChatsState = {

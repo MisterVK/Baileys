@@ -2,7 +2,6 @@ import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto'
 import { PROCESSABLE_HISTORY_TYPES } from '../Defaults'
 import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence } from '../Types'
-import { LabelAssociationType } from '../Types/LabelAssociation'
 import { chatModificationToAppPatch, ChatMutationMap, decodePatches, decodeSyncdSnapshot, encodeSyncdPatch, extractSyncdPatches, generateProfilePicture, getHistoryMsg, newLTHashState, processSyncAction } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import processMessage from '../Utils/process-message'
@@ -691,21 +690,37 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return props
 	}
 
-	const setChatLabel = async(jid: string, labelId: string, labaled: boolean = true) => {
+	const addChatLabel = async(jid: string, label: string) => {
 		return chatModify({
-			type: LabelAssociationType.JID,
-			labelId,
-			labelAssociationAction: { labaled },
+			addLabel: {
+				label
+			}
 		}, jid)
 	}
 
-	const setMessageLabel = async(jid: string, messageId: string, labelId: string, labaled: boolean = true) => {
+	const removeChatLabel = async(jid: string, label: string) => {
 		return chatModify({
-			type: LabelAssociationType.MESSAGE,
-			labelId,
-			messageId,
-			labelAssociationAction: { labaled },
+			removeLabel: {
+				label
+			}
+		}, jid)
+	}
 
+	const addMessageLabel = async(jid: string, messageId: string, label: string) => {
+		return chatModify({
+			addMessageLabel: {
+				label,
+				messageId
+			}
+		}, jid)
+	}
+
+	const removeMessageLabel = async(jid: string, messageId: string, label: string) => {
+		return chatModify({
+			removeMessageLabel: {
+				label,
+				messageId
+			}
 		}, jid)
 	}
 
@@ -878,8 +893,10 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		updateBlockStatus,
 		getBusinessProfile,
 		resyncAppState,
-		setChatLabel,
-		setMessageLabel,
+		addChatLabel,
+		removeChatLabel,
+		addMessageLabel,
+		removeMessageLabel,
 		chatModify
 	}
 }
