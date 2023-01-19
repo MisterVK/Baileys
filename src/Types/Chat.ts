@@ -91,7 +91,6 @@ export type ChatModification =
     | {
         removeLabel: {
             label: string
-            messageId?: string
         }
     }
     | {
