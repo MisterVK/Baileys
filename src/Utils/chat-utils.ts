@@ -3,6 +3,7 @@ import { AxiosRequestConfig } from 'axios'
 import type { Logger } from 'pino'
 import { proto } from '../../WAProto'
 import { BaileysEventEmitter, Chat, ChatModification, ChatMutation, ChatUpdate, Contact, InitialAppStateSyncOptions, LastMessageList, LTHashState, WAPatchCreate, WAPatchName } from '../Types'
+import { LabelAssociationType } from '../Types/LabelAssociation'
 import { BinaryNode, getBinaryNodeChild, getBinaryNodeChildren, isJidGroup, jidNormalizedUser } from '../WABinary'
 import { aesDecrypt, aesEncrypt, hkdf, hmacSign } from './crypto'
 import { toNumber } from './generics'
@@ -606,6 +607,54 @@ export const chatModificationToAppPatch = (
 			apiVersion: 1,
 			operation: OP.SET,
 		}
+	} else if('addLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: true
+				}
+			},
+			index: [LabelAssociationType.JID, mod.addLabel.label, jid],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
+	} else if('removeLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: false
+				}
+			},
+			index: [LabelAssociationType.JID, mod.removeLabel.label, jid],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
+	} else if('addMessageLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: true
+				}
+			},
+			index: [LabelAssociationType.JID, mod.addMessageLabel.label, jid, mod.addMessageLabel.messageId, '0', '0'],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
+	} else if('removeMessageLabel' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: false
+				}
+			},
+			index: [LabelAssociationType.JID, mod.removeMessageLabel.label, jid, mod.removeMessageLabel.messageId, '0', '0'],
+			type: 'regular',
+			apiVersion: 1,
+			operation: OP.SET,
+		}
 	} else {
 		throw new Boom('not supported')
 	}
@@ -731,6 +780,27 @@ export const processSyncAction = (
 		if(!isInitialSync) {
 			ev.emit('chats.delete', [id])
 		}
+	} else if(action?.labelEditAction) {
+		ev.emit('label.edit', {
+			id,
+			name: action.labelEditAction.name!,
+			color: action.labelEditAction.color!,
+			predefinedId: action.labelEditAction.predefinedId || undefined,
+			deleted: !!action.labelEditAction.deleted,
+		})
+	} else if(action?.labelAssociationAction) {
+		const eventName = action.labelAssociationAction.labeled ? 'label.association.add' : 'label.association.delete'
+		let associationId = syncAction.index[2]
+		if(type === LabelAssociationType.MESSAGE) {
+			associationId = associationId + '_' + syncAction.index[3]
+		}
+
+		ev.emit(eventName, {
+			associationId,
+			labelId: id,
+			type: type as LabelAssociationType
+		})
+
 	} else {
 		logger?.debug({ syncAction, id }, 'unprocessable update')
 	}

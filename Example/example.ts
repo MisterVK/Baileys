@@ -118,6 +118,12 @@ const startSock = async() => {
 							console.log('replying to', msg.key.remoteJid)
 							await sock!.readMessages([msg.key])
 							await sendMessageWTyping({ text: 'Hello there!' }, msg.key.remoteJid!)
+
+							if(store) {
+								const labels = Object.values(store.labels)
+								await sock.addChatLabel(msg.key.remoteJid!, labels[0].id)
+								await sock.addMessageLabel(msg.key.remoteJid!, msg.key.id!, labels[1].id)
+							}
 						}
 					}
 				}

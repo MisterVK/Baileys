@@ -74,7 +74,7 @@ export type ChatModification =
     }
     | {
         star: {
-            messages: { id: string, fromMe?: boolean }[],
+            messages: { id: string, fromMe?: boolean }[]
             star: boolean
         }
     }
@@ -83,6 +83,28 @@ export type ChatModification =
         lastMessages: LastMessageList
     }
     | { delete: true, lastMessages: LastMessageList }
+    | {
+        addLabel: {
+            label: string
+        }
+    }
+    | {
+        removeLabel: {
+            label: string
+        }
+    }
+    | {
+        addMessageLabel: {
+            label: string
+            messageId: string
+        }
+    }
+    | {
+        removeMessageLabel: {
+            label: string
+            messageId: string
+        }
+    }
 
 export type InitialReceivedChatsState = {
     [jid: string]: {
