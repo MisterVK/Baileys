@@ -690,12 +690,32 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return props
 	}
 
+	/**
+	 * modify a chat -- mark unread, read etc.
+	 * lastMessages must be sorted in reverse chronologically
+	 * requires the last messages till the last message received; required for archive & unread
+	 */
+	const chatModify = (mod: ChatModification, jid: string) => {
+		const patch = chatModificationToAppPatch(mod, jid)
+		return appPatch(patch)
+	}
+
 	const addChatLabel = async(jid: string, label: string) => {
 		return chatModify({
 			addLabel: {
 				label
 			}
 		}, jid)
+	}
+
+	const setLabels = async(jid: string[], label: string) => {
+		return jid.map(jid=>{
+			return chatModify({
+				addLabel: {
+					label
+				}
+			}, jid)
+		})
 	}
 
 	const removeChatLabel = async(jid: string, label: string) => {
@@ -722,16 +742,6 @@ export const makeChatsSocket = (config: SocketConfig) => {
 				messageId
 			}
 		}, jid)
-	}
-
-	/**
-     * modify a chat -- mark unread, read etc.
-     * lastMessages must be sorted in reverse chronologically
-     * requires the last messages till the last message received; required for archive & unread
-    */
-	const chatModify = (mod: ChatModification, jid: string) => {
-		const patch = chatModificationToAppPatch(mod, jid)
-		return appPatch(patch)
 	}
 
 	/**
@@ -894,6 +904,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		getBusinessProfile,
 		resyncAppState,
 		addChatLabel,
+		setLabels,
 		removeChatLabel,
 		addMessageLabel,
 		removeMessageLabel,
