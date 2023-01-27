@@ -19,8 +19,23 @@ store?.readFromFile('./baileys_store_multi.json')
 // save every 10s
 setInterval(() => {
 	store?.writeToFile('./baileys_store_multi.json')
+	console.log(getLabels())
 }, 10_000)
+const getLabels = () => {
+	const allAssociationsLabels = store?.labelsAssociations.all()
+	const allLabels =  store?.labels
 
+	for (const label in allLabels) {
+		allLabels[label].count = 0
+		allAssociationsLabels?.map(item=>{
+			if(item.labelId===allLabels[label].id) {
+				allLabels[label].count!++
+			}
+		})
+
+	}
+	return allLabels
+}
 // start a connection
 const startSock = async() => {
 	const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')

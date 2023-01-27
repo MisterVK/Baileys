@@ -12,4 +12,6 @@ export interface Label {
 
     /** true if you delete label from your WA */
     deleted: boolean
+
+    count?:number
 }
